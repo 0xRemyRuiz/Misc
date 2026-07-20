@@ -3,9 +3,10 @@
 // @namespace   Violentmonkey Scripts
 // @match       *://www.udemy.com/course/*
 // @grant       none
-// @version     0.1
+// @version     0.1.2
 // @author      - 0xRemyRuiz
 // @description 01/05/2024, 13:41:31
+// @updated     20/07/2026, 14:49:00
 // ==/UserScript==
 
 window._DEBUG_ = true;
@@ -89,32 +90,37 @@ window._DEBUG_ = true;
       const getScore = () => {
 
         const langObj = {
-          'en': ['lecture.*', 'downloadable resource', 'article'],
-          'fr': ['session.*', 'ressource.* téléchargeable.*', 'article.*'],
-          'de': ['Lektion.*', 'zum Download verfügbare.* Material.*', 'Artikel'],
-          'es': ['clas.*', 'recurso.* descargable.*', 'artículo.*'],
-          'id': ['pelajaran', 'sumber daya yang dapat diunduh', 'artikel'],
-          'it': ['lezion.*', 'risors.* scaricabil.*', 'articol.*'],
+          'en': ['lecture.*', 'downloadable.+resource', 'article'],
+          'fr': ['session.*', 'ressource.+téléchargeable.*', 'article.*'],
+          'de': ['Lektion.*', 'zum.+Download.+verfügbare.* Material.*', 'Artikel'],
+          'es': ['clas.*', 'recurso.+descargable.*', 'artículo.*'],
+          'id': ['pelajaran', 'sumber.+daya.+yang.+dapat.+diunduh', 'artikel'],
+          'it': ['lezion.*', 'risors.+scaricabil.*', 'articol.*'],
           'jp': ['レクチャーの数:', '個のダウンロード可能なリソース', '件の記事'],
           'cn': ['个讲座', '个可下载资源', '篇文章'],
           'cnt': ['堂講座', '個可下載的資源', '篇文章'],
-          'kr': ['개의 강의', '개의 다운로드 가능 리소스', '관련 글 2개'], // korean seems to do similar to polish with plural (TOIMPRV)
-          'nl': ['college.*', 'bron.* die k.* worden gedownload', 'artikel.*'],
-          'pl': ['Wykłady: ', 'zasób do pobrania: | zasób do pobrania', 'artykuły: | artykuł'], // polish reverse order when plural is in play, not fixing for now (TODO)
-          'pt': ['aula.*', 'recurso.* para download', 'artigo.*'],
+          'kr': ['개의.+강의', '개의.+다운로드.+가능.+리소스', '관련 글 2개'], // korean seems to do similar to polish with plural (TOIMPRV)
+          'nl': ['college.*', 'bron.+die.+k.+worden.+gedownload', 'artikel.*'],
+          'pl': ['Wykłady: ', ' *zasób.+do.+pobrania:*.*', 'artykuły:*'], // polish reverse order when plural is in play, not fixing for now (TODO)
+          'pt': ['aula.*', 'recurso.* para.+download', 'artigo.*'],
           'ro': ['lecți.*', 'resurs.* descărcabil.*', 'articol.*'],
-          'ru': ['лекций', 'ресурс.* для скачивания', 'стат.*'],
+          'ru': ['лекций', 'ресурс.+для.+скачивания', 'стат.*'],
           'th': ['การบรรยาย', 'แหล่งข้อมูลที่ดาวน์โหลดได้', 'บทความ'],
-          'tr': ['ders', 'indirilebilir kaynak', 'makale'],
-          'vn': ['bài giảng', 'tài nguyên có thể tải xuống', 'bài viết'],
+          'tr': ['ders', 'indirilebilir.+kaynak', 'makale'],
+          'vn': ['bài giảng', 'tài.+nguyên.+có.+thể.+tải.+xuống', 'bài viết'],
         }
         // total number of students (UNUSED)
         //parseInt($('#main-content-anchor div.clp-lead__badge-ratings-enrollment div.enrollment').innerHTML.replace(/[^0-9]/g, ""))
 
         // TODO: maybe try to return error in a useful meaningful way so if the layout changes and breaks the script I'm able to fix it...
         try {
+          const rootContainerSelector = '.course-landing-page-module-scss-module__WBF27W__layout-container';
+          if (window._DEBUG_) console.log('matchRoot', document.querySelector(rootContainerSelector));
+          const $rootContainer = document.querySelector(rootContainerSelector);
+
           // try to detect the language of the page
-          const firstSentence = document.querySelector('#main-content-anchor .component-margin > h2').innerHTML;
+          // old one : const firstSentence = document.querySelector('#main-content-anchor .component-margin > h2').innerHTML;
+          const firstSentence = document.querySelector('#what-you-will-learn + .component-margin > h2').innerHTML;
           const l = (() => {
             if (firstSentence.match(/.*What you'll learn.*/i)) return 'en';
             if (firstSentence.match(/.*Ce que vous apprendrez.*/i)) return 'fr';
@@ -138,9 +144,13 @@ window._DEBUG_ = true;
           if (window._DEBUG_) console.log(`Detected language is : ${l}`);
           const lang = langObj[l];
 
-           // japanese has reverse logic here
-          const infosRegex = l == 'jp' ? `${lang[0]} *(\\d+).+<span>.*<span>([^<]+)` : `(\\d+) *${lang[0]}.+<span>.*<span>([^<]+)`;
-          const infosMatch = document.querySelector('#main-content-anchor span.curriculum--content-length--V3vIz').innerHTML.match(new RegExp(infosRegex, 'i'));
+
+
+          // japanese has reverse logic here
+          const infosRegex = l == 'jp' ? `${lang[0]}.*(\\d+).*.+<span>.*<span>([^<]+)` : `(\\d+).*${lang[0]}.+<span>.*<span>([^<]+)`;
+          // old one : if (window._DEBUG_) console.log('match3', document.querySelector('#main-content-anchor span.curriculum--content-length--V3vIz'));
+          if (window._DEBUG_) console.log('match3', $rootContainer);
+          const infosMatch = $rootContainer.querySelector('.curriculum-module-scss-module__lGEGKG__curriculum-sub-header').innerHTML.match(new RegExp(infosRegex, 'i'));
           if (!infosMatch) {
             if (window._DEBUG_) console.log(`ERROR fetching infosMatch using ${infosRegex} infoRegex`);
             return -1;
@@ -152,27 +162,51 @@ window._DEBUG_ = true;
           }
           const hours = timeMatch[1] ? parseInt(timeMatch[1].replace(/[^\d]/g, '')) : 0;
           const minutes = parseInt(timeMatch[2]);
+          if (window._DEBUG_) console.log(`total time: ${hours}h${minutes}`);
 
-          const totalEnrolledStudents = parseInt(document.querySelector('#main-content-anchor div.clp-lead__badge-ratings-enrollment div.enrollment').innerHTML.replace(/[^0-9]/g, ""));
+          // old one : let enrolledStudentsEl = $rootContainer.querySelector('div.clp-lead__badge-ratings-enrollment span.star-rating-module--rating-number--2-qA2');
+          let enrolledStudentsEl = $rootContainer.querySelector('.enrollment-count-module-scss-module__3KI-AG__student-count');
+          if (!enrolledStudentsEl) enrolledStudentsEl = document.querySelector('.subs-diff-module--num-learners-display--SxLL8 span.ud-heading-sm');
+          if (window._DEBUG_) console.log('enrolledStudentsEl', enrolledStudentsEl);
+          const totalEnrolledStudents = parseInt(enrolledStudentsEl.innerHTML.replace(/[^0-9]/g, ""));
+          if (window._DEBUG_) console.log('enrolledStudents', totalEnrolledStudents);
 
-          const incentiveListElem = document.querySelector('div.component-margin ul.incentive-list');
-          const downloadableResRegex = `(\\d+) *${lang[1]}`;
+          // old one : const incentiveListElem = $rootContainer.querySelector('div.component-margin ul.incentive-list');
+          const incentiveListElem = $rootContainer.querySelector('.course-includes-module-scss-module__YOJ8Yq__course-includes-body');
+          if (window._DEBUG_) console.log('incentiveListElem', incentiveListElem);
+          const downloadableResRegex = `(\\d+)[^<>]+${lang[1]}`;
           const downloadableResMatch = incentiveListElem.innerHTML.match(new RegExp(downloadableResRegex, 'i'));
-          console.log(new RegExp(downloadableResRegex, 'i'));
+          if (window._DEBUG_) console.log('match6', new RegExp(downloadableResRegex, 'i'));
           const downloadableRes = downloadableResMatch ? parseInt(downloadableResMatch[1]) : 0;
+          if (window._DEBUG_) console.log(`downloadableRes: ${downloadableRes}`);
           const articlesNumberRegex = `(\\d+) *${lang[2]}`;
           const articlesNumberMatch = incentiveListElem.innerHTML.match(new RegExp(articlesNumberRegex, 'i'));
           const articlesNumber = articlesNumberMatch ? parseInt(articlesNumberMatch[1]) : 0;
 
-          const priceMatch = document.querySelector('.ud-clp-price-text').innerHTML.replace(/,/, '.').match(/([\d\.]+)/);
+          // old one : const priceMatch = document.querySelector('.ud-clp-price-text').innerHTML.replace(/,/, '.').match(/([\d\.]+)/);
+          const priceMatch = $rootContainer.querySelector('[data-purpose="course-price-text"]').innerHTML.replace(/,/, '.').match(/([\d\.]+)/);
           const price = priceMatch ? parseFloat(priceMatch[1]) : -1;
           if (window._DEBUG_) console.log('Price seems to be: '+price);
 
+          // old one : let ratingScore = $rootContainer.querySelector('div.clp-lead__badge-ratings-enrollment span.star-rating-module--rating-number--2-qA2');
+          let ratingScore = $rootContainer.querySelector('.rating-display-module-scss-module__TL_ANq__rating-container ._rating-number_1y2gh_16');
+          // if (!ratingScore) ratingScore = $rootContainer.querySelector('.subs-diff-module--ratings-display--hj0Q0 span.ud-heading-xl');
+          // if (!ratingScore) ratingScore = $rootContainer.querySelector('.star-rating-module--rating-number--2-qA2');
+          if (window._DEBUG_) console.log('ratingScore', ratingScore);
+
+          // old one : let numberReviewers = $rootContainer.querySelector('div.clp-lead__badge-ratings-enrollment a.ud-btn-link.ud-heading-md.ud-text-sm');
+          let numberReviewersEl = $rootContainer.querySelector('.rating-display-module-scss-module__TL_ANq__rating-container .rating-display-module-scss-module__TL_ANq__rating-count');
+          if (window._DEBUG_) console.log('numberReviewers element', numberReviewersEl);
+          // if (!numberReviewers) numberReviewers = $rootContainer.querySelector('.subs-diff-module--ratings--o0ZEm');
+          // if (!numberReviewers) numberReviewers = $rootContainer.querySelector('.styles--rating-wrapper--YkK4n');
+          // numberReviewers = numberReviewers.lastChild;
+          if (window._DEBUG_) console.log('numberReviewers', numberReviewersEl);
+
           return quality(
             // float rating score
-            parseFloat(document.querySelector('#main-content-anchor div.clp-lead__badge-ratings-enrollment span.star-rating-module--rating-number--2-qA2').textContent.replace(',', '.')),
+            parseFloat(ratingScore.textContent.replace(',', '.')),
             // int total number of reviewers
-            parseInt(document.querySelector('#main-content-anchor div.clp-lead__badge-ratings-enrollment a.ud-btn-link.ud-heading-md.ud-text-sm').lastChild.innerHTML.replace(/[^0-9]/g, '')),
+            parseInt(numberReviewersEl.innerHTML.replace(/[^0-9]/g, '')),
             totalEnrolledStudents,
             (hours ? hours : 0) * 60 + minutes,
             // total number of lectures
@@ -182,7 +216,7 @@ window._DEBUG_ = true;
             price
           );
         } catch(err) {
-          console.log('error fetching infos');
+          console.log('error fetching infos', err);
         }
         return 'No Rating'
       }
